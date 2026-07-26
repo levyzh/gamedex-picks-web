@@ -1,0 +1,11 @@
+/* the only global styles here. everything else is inline via theme.ts, same
+   as the main app. body margin is the browser's default 8px — without this
+   there's a pale strip around the page in dark mode. */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+}
