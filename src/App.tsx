@@ -5,6 +5,7 @@
 import { useState, useEffect } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { AuthForm } from "./components/AuthForm";
+import { PickCard } from "./components/PickCard";
 import { watchSession, signOut } from "./api/auth";
 import { fetchRecommendations } from "./api/picks";
 import type { PicksResponse } from "./lib/types";
@@ -21,6 +22,11 @@ function Picks() {
   const [data, setData] = useState<PicksResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // the weights in recommender.py are still untuned guesses, so keeping the
+  // raw response one click away is worth the few lines. drop this once the
+  // numbers stop moving.
+  const [showRaw, setShowRaw] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -87,20 +93,26 @@ function Picks() {
 
   if (!data) return null;
 
+  const isColdStart = data.basis === "popular";
+
   return (
-    <div style={{ width: "100%", maxWidth: 720 }}>
-      <div style={{ ...panel, marginBottom: 14 }}>
-        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+    <div style={{ width: "100%", maxWidth: 900 }}>
+      <div style={{ ...panel, marginBottom: 20 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
-            <div style={{ color: T.text, fontSize: 15, fontWeight: 600, fontFamily: display }}>
-              {data.results.length} picks
+            <div style={{ color: T.text, fontSize: 17, fontWeight: 700, fontFamily: display, letterSpacing: "-0.02em" }}>
+              {isColdStart ? "Popular right now" : "Your picks"}
             </div>
-            <div style={{ color: T.meta, fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
-              {data.basis === "content"
-                ? `Based on ${data.from_entries} games from your list, out of ${data.candidates_considered} candidates.`
-                : "Popular right now — not enough in your list to go on yet."}
-              {data.adult_included && " Adult titles included."}
+            <div style={{ color: T.meta, fontSize: 13, marginTop: 5, lineHeight: 1.5 }}>
+              {isColdStart
+                ? "Not enough in your list yet to work out your taste — so here's what everyone's playing. Rate a few more games and this page changes."
+                : `Ranked from ${data.from_entries} games on your list, out of ${data.candidates_considered} candidates.`}
             </div>
+            {data.adult_included && !isColdStart && (
+              <div style={{ color: T.metaDim, fontSize: 12.5, marginTop: 6 }}>
+                Adult titles included, based on what's already on your list.
+              </div>
+            )}
             {data.note && (
               <div style={{ color: T.metaDim, fontSize: 12.5, marginTop: 6 }}>{data.note}</div>
             )}
@@ -108,22 +120,48 @@ function Picks() {
 
           <button
             onClick={load}
-            style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${T.borderH}`, background: T.btn, color: T.text, fontSize: 12.5, fontWeight: 600, fontFamily: body, cursor: "pointer", whiteSpace: "nowrap" }}
+            style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${T.borderH}`, background: T.btn, color: T.text, fontSize: 12.5, fontWeight: 600, fontFamily: body, cursor: "pointer", whiteSpace: "nowrap" }}
           >
             Reload
           </button>
         </div>
       </div>
 
-      {/* raw on purpose. step 4 replaces this with cards — until then I want
-          to see exactly what the api sent, not my own rendering of it. */}
-      <pre style={{
-        margin: 0, padding: "16px 18px", background: T.surface,
-        border: `1px solid ${T.border}`, borderRadius: 14,
-        fontSize: 11.5, lineHeight: 1.55, color: T.textBody,
-        whiteSpace: "pre-wrap", wordBreak: "break-word",
-        maxHeight: 520, overflow: "auto",
-      }}>{JSON.stringify(data, null, 2)}</pre>
+      {data.results.length === 0 ? (
+        <div style={{ ...panel, textAlign: "center" }}>
+          <div style={{ color: T.text, fontSize: 14, fontWeight: 600 }}>Nothing to show</div>
+          <div style={{ color: T.meta, fontSize: 13, marginTop: 6, lineHeight: 1.6 }}>
+            Every candidate was either already on your list or filtered out.
+          </div>
+        </div>
+      ) : (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+          gap: 20,
+        }}>
+          {data.results.map((game) => <PickCard key={game.id} game={game} />)}
+        </div>
+      )}
+
+      <div style={{ marginTop: 28, textAlign: "center" }}>
+        <button
+          onClick={() => setShowRaw(!showRaw)}
+          style={{ background: "none", border: "none", color: T.metaDim, fontSize: 12, fontFamily: body, cursor: "pointer", padding: 0 }}
+        >
+          {showRaw ? "Hide raw response" : "Show raw response"}
+        </button>
+      </div>
+
+      {showRaw && (
+        <pre style={{
+          margin: "12px 0 0", padding: "16px 18px", background: T.surface,
+          border: `1px solid ${T.border}`, borderRadius: 14,
+          fontSize: 11.5, lineHeight: 1.55, color: T.textBody,
+          whiteSpace: "pre-wrap", wordBreak: "break-word",
+          maxHeight: 420, overflow: "auto",
+        }}>{JSON.stringify(data, null, 2)}</pre>
+      )}
     </div>
   );
 }
