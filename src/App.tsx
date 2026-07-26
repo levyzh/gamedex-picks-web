@@ -1,11 +1,13 @@
 // App.tsx — the whole app for now. Logged out shows the form, logged in
-// shows proof that auth works. Step 3 replaces that proof with the actual
-// recommendations call; nothing else on this screen should need to move.
+// fetches recommendations and dumps them raw. Step 4 turns that dump into
+// actual cards; the fetching and error handling below shouldn't need to move.
 
 import { useState, useEffect } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { AuthForm } from "./components/AuthForm";
 import { watchSession, signOut } from "./api/auth";
+import { fetchRecommendations } from "./api/picks";
+import type { PicksResponse } from "./lib/types";
 import { THEMES, ThemeCtx, useT, body, display } from "./lib/theme";
 
 // separate storage key from the main app's "gdx-theme". localStorage is
@@ -13,68 +15,115 @@ import { THEMES, ThemeCtx, useT, body, display } from "./lib/theme";
 // both live on gamedex.com subdomains.
 const THEME_KEY = "gdxp-theme";
 
-function SignedIn({ session }: { session: Session }) {
+function Picks() {
   const T = useT();
-  const [copied, setCopied] = useState(false);
 
-  // the token is the thing worth having on screen right now — it's what
-  // /docs wants pasted into the Authorize box, and it's the proof that this
-  // app and the python service agree about who I am.
-  const token = session.access_token;
+  const [data, setData] = useState<PicksResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  async function copyToken() {
-    await navigator.clipboard.writeText(token);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
+  async function load() {
+    setLoading(true);
+    setError(null);
+
+    try {
+      setData(await fetchRecommendations());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  const labelStyle = { color: T.metaDim, fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", textTransform: "uppercase" as const };
+  // NOTE: StrictMode runs this twice in dev, so I'll see two requests in the
+  // uvicorn log and two rounds of RAWG calls. That's dev-only and expected —
+  // it does NOT happen in a build. Worth remembering before I go hunting for
+  // a double-fetch bug that isn't there.
+  useEffect(() => { load(); }, []);
 
-  return (
-    <div style={{ width: "100%", maxWidth: 620 }}>
-      <div style={{
-        background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14,
-        padding: "24px 26px", boxShadow: T.shadow,
-      }}>
-        <h2 style={{ margin: 0, fontFamily: display, fontWeight: 700, fontSize: 18, letterSpacing: "-0.02em", color: T.text }}>
-          Logged in
-        </h2>
-        <p style={{ margin: "6px 0 20px", color: T.meta, fontSize: 13, lineHeight: 1.5 }}>
-          Auth works end to end. Recommendations land here next.
-        </p>
+  const panel = {
+    background: T.surface, border: `1px solid ${T.border}`,
+    borderRadius: 14, padding: "22px 24px", boxShadow: T.shadow,
+  };
 
-        <div style={{ marginBottom: 14 }}>
-          <div style={labelStyle}>Email</div>
-          <div style={{ color: T.textBody, fontSize: 13.5, marginTop: 3 }}>{session.user.email}</div>
+  if (loading) {
+    return (
+      <div style={{ ...panel, width: "100%", maxWidth: 720 }}>
+        <div style={{ color: T.text, fontSize: 14, fontWeight: 600 }}>Working out your picks…</div>
+        <div style={{ color: T.meta, fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>
+          This one's genuinely slow — the server is pulling candidate games from
+          RAWG before it can rank anything. Several seconds is normal.
         </div>
+      </div>
+    );
+  }
 
-        <div style={{ marginBottom: 14 }}>
-          {/* this is `sub` in the JWT — the same value auth.py pulls out and
-              gamedex_client.py puts in the /api/users/{id}/list URL. */}
-          <div style={labelStyle}>User ID</div>
-          <div style={{ color: T.textBody, fontSize: 13, marginTop: 3, fontFamily: "monospace" }}>{session.user.id}</div>
+  if (error) {
+    // "Failed to fetch" is the browser's way of saying the request never got
+    // a usable response at all — service down, or blocked by cors. anything
+    // else came back THROUGH the service as a fastapi `detail`, which means
+    // the connection is fine and the problem is further upstream. showing the
+    // cors hint on a rawg outage just sends me hunting in the wrong place.
+    const isConnectionFailure = error.toLowerCase().includes("failed to fetch");
+
+    return (
+      <div style={{ ...panel, width: "100%", maxWidth: 720 }}>
+        <div style={{ color: T.text, fontSize: 15, fontWeight: 600 }}>Couldn't load your picks</div>
+        <div style={{ color: "#EF4444", fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>{error}</div>
+        <div style={{ color: T.metaDim, fontSize: 12.5, marginTop: 10, lineHeight: 1.6 }}>
+          {isConnectionFailure
+            ? "The Python service probably isn't running, or this origin isn't in its CORS_ORIGINS."
+            : "This came back from the service itself, so the connection is fine. If it mentions RAWG, that's an upstream outage — try again in a minute."}
         </div>
-
-        <div style={labelStyle}>Access token</div>
-        <pre style={{
-          margin: "5px 0 0", padding: "10px 12px", background: T.bg,
-          border: `1px solid ${T.border}`, borderRadius: 9,
-          fontSize: 11, lineHeight: 1.5, color: T.meta,
-          whiteSpace: "pre-wrap", wordBreak: "break-all", maxHeight: 110, overflow: "auto",
-        }}>{token}</pre>
-
         <button
-          onClick={copyToken}
-          style={{
-            marginTop: 10, padding: "7px 14px", borderRadius: 8,
-            border: `1px solid ${T.borderH}`, background: T.btn,
-            color: T.text, fontSize: 12.5, fontWeight: 600,
-            fontFamily: body, cursor: "pointer",
-          }}
+          onClick={load}
+          style={{ marginTop: 16, padding: "9px 18px", borderRadius: 8, border: "none", background: T.accent, color: "#fff", fontWeight: 600, fontSize: 13, fontFamily: body, cursor: "pointer" }}
         >
-          {copied ? "Copied" : "Copy token"}
+          Try again
         </button>
       </div>
+    );
+  }
+
+  if (!data) return null;
+
+  return (
+    <div style={{ width: "100%", maxWidth: 720 }}>
+      <div style={{ ...panel, marginBottom: 14 }}>
+        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <div style={{ color: T.text, fontSize: 15, fontWeight: 600, fontFamily: display }}>
+              {data.results.length} picks
+            </div>
+            <div style={{ color: T.meta, fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>
+              {data.basis === "content"
+                ? `Based on ${data.from_entries} games from your list, out of ${data.candidates_considered} candidates.`
+                : "Popular right now — not enough in your list to go on yet."}
+              {data.adult_included && " Adult titles included."}
+            </div>
+            {data.note && (
+              <div style={{ color: T.metaDim, fontSize: 12.5, marginTop: 6 }}>{data.note}</div>
+            )}
+          </div>
+
+          <button
+            onClick={load}
+            style={{ padding: "7px 14px", borderRadius: 8, border: `1px solid ${T.borderH}`, background: T.btn, color: T.text, fontSize: 12.5, fontWeight: 600, fontFamily: body, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            Reload
+          </button>
+        </div>
+      </div>
+
+      {/* raw on purpose. step 4 replaces this with cards — until then I want
+          to see exactly what the api sent, not my own rendering of it. */}
+      <pre style={{
+        margin: 0, padding: "16px 18px", background: T.surface,
+        border: `1px solid ${T.border}`, borderRadius: 14,
+        fontSize: 11.5, lineHeight: 1.55, color: T.textBody,
+        whiteSpace: "pre-wrap", wordBreak: "break-word",
+        maxHeight: 520, overflow: "auto",
+      }}>{JSON.stringify(data, null, 2)}</pre>
     </div>
   );
 }
@@ -141,13 +190,13 @@ export default function App() {
         </header>
 
         <main style={{
-          flex: 1, width: "100%", padding: "40px 24px 60px",
+          flex: 1, width: "100%", padding: "24px 24px 60px",
           display: "flex", justifyContent: "center", alignItems: "flex-start",
         }}>
           {checkingSession
             ? <div style={{ color: T.meta, fontSize: 13.5 }}>Checking your session…</div>
             : session
-              ? <SignedIn session={session} />
+              ? <Picks />
               : <AuthForm />}
         </main>
       </div>
