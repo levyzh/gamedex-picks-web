@@ -3,7 +3,7 @@
 // client. today that's one endpoint.
 
 import { supabase } from "./supabase";
-import type { CoversResponse, PicksResponse } from "../lib/types";
+import type { CoversResponse, PicksResponse, StatsResponse } from "../lib/types";
 
 const BASE = import.meta.env.VITE_PICKS_API_URL;
 
@@ -53,5 +53,16 @@ export async function fetchCovers(): Promise<string[]> {
     return body.covers;
   } catch {
     return [];
+  }
+}
+
+// public, no token. null on failure so the welcome page can just leave the band out.
+export async function fetchStats(): Promise<StatsResponse | null> {
+  try {
+    const response = await fetch(`${BASE}/stats`);
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
   }
 }

@@ -1,12 +1,13 @@
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { CoverWall } from "./CoverWall";
+import { fetchStats } from "../api/picks";
+import type { StatsResponse } from "../lib/types";
 import { display, useT } from "../lib/theme";
 
-const STATS = [
-  { value: "20", label: "picks per run" },
-  { value: "5", label: "list statuses weighed" },
-  { value: "1–10", label: "score scale" },
-];
+// 893412 -> "893K+". exact counts drift daily, so the rounded figure reads more honestly.
+function formatCount(n: number) {
+  return n >= 1000 ? `${Math.floor(n / 1000).toLocaleString()}K+` : n.toLocaleString();
+}
 
 const STEPS = [
   {
@@ -29,6 +30,19 @@ const STEPS = [
 
 export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
   const T = useT();
+  const [stats, setStats] = useState<StatsResponse | null>(null);
+
+  useEffect(() => {
+    fetchStats().then(setStats);
+  }, []);
+
+  const statItems = stats
+    ? [
+        { value: formatCount(stats.games), label: "games" },
+        { value: formatCount(stats.genres), label: "genres" },
+        { value: formatCount(stats.tags), label: "tags" },
+      ]
+    : [];
 
   const sectionTitle: CSSProperties = {
     margin: 0, fontFamily: display, fontWeight: 700, fontSize: 28,
@@ -75,21 +89,23 @@ export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
           </button>
         </section>
 
-        <section style={{
-          marginTop: 56,
-          // 1px gaps over a border-coloured background draw the dividers, in rows or stacked.
-          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 1,
-          background: T.border, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden",
-        }}>
-          {STATS.map((stat) => (
-            <div key={stat.label} style={{ padding: "22px 20px", textAlign: "center", background: T.surface }}>
-              <div style={{ fontFamily: display, fontWeight: 700, fontSize: 30, letterSpacing: "-0.02em", color: T.text }}>
-                {stat.value}
+        {statItems.length > 0 && (
+          <section style={{
+            marginTop: 56,
+            // 1px gaps over a border-coloured background draw the dividers, in rows or stacked.
+            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 1,
+            background: T.border, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden",
+          }}>
+            {statItems.map((stat) => (
+              <div key={stat.label} style={{ padding: "22px 20px", textAlign: "center", background: T.surface }}>
+                <div style={{ fontFamily: display, fontWeight: 700, fontSize: 30, letterSpacing: "-0.02em", color: T.text }}>
+                  {stat.value}
+                </div>
+                <div style={{ marginTop: 4, color: T.meta, fontSize: 13 }}>{stat.label}</div>
               </div>
-              <div style={{ marginTop: 4, color: T.meta, fontSize: 13 }}>{stat.label}</div>
-            </div>
-          ))}
-        </section>
+            ))}
+          </section>
+        )}
 
         <section style={{ padding: "80px 0 20px" }}>
           <h2 style={sectionTitle}>How Picks works</h2>

@@ -36,3 +36,9 @@ export interface PicksResponse {
 export interface CoversResponse {
   covers: string[];
 }
+
+export interface StatsResponse {
+  games: number;
+  genres: number;
+  tags: number;
+}
