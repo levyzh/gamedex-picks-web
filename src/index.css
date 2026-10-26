@@ -9,3 +9,10 @@ body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
 }
+
+/* CoverWall rows slide by half their width; the row holds two copies of its covers. */
+@keyframes gdxp-slide {
+  to {
+    transform: translateX(-50%);
+  }
+}
