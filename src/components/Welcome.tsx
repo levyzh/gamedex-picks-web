@@ -54,9 +54,9 @@ export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
       <CoverWall />
 
       <div style={{ position: "relative", zIndex: 1, maxWidth: 1040, margin: "0 auto" }}>
-        {/* fills the first screen under the 60px header; stats and steps start below the fold. */}
+        {/* fills the first screen; stats and steps start below the fold. */}
         <section style={{
-          minHeight: "calc(100svh - 60px)", padding: "48px 0",
+          minHeight: "100svh", padding: "48px 0",
           display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
           textAlign: "center",
         }}>
@@ -65,7 +65,7 @@ export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
             fontSize: "clamp(34px, 6vw, 56px)", lineHeight: 1.05, letterSpacing: "-0.03em",
             color: T.text,
           }}>
-            Game recommendations built from a <span style={{ color: T.accent }}>Gamedex</span> list.
+            Game recommendations built from a Gamedex list.
           </h1>
 
           <h2 style={{ margin: "22px 0 0", fontFamily: display, fontWeight: 600, fontSize: 20, letterSpacing: "-0.01em", color: T.textBody }}>

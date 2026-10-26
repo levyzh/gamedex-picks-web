@@ -105,13 +105,6 @@ function Picks() {
               <div style={{ color: T.metaDim, fontSize: 12.5, marginTop: 6 }}>{data.note}</div>
             )}
           </div>
-
-          <button
-            onClick={load}
-            style={{ padding: "8px 16px", borderRadius: 8, border: `1px solid ${T.borderH}`, background: T.btn, color: T.text, fontSize: 12.5, fontWeight: 600, fontFamily: body, cursor: "pointer", whiteSpace: "nowrap" }}
-          >
-            Reload
-          </button>
         </div>
       </div>
 
@@ -170,6 +163,8 @@ export default function App() {
   // avoids flashing the welcome page at someone who's already logged in.
   const [checkingSession, setCheckingSession] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
+  // bumping this remounts <Picks>, which re-runs the recommender.
+  const [runId, setRunId] = useState(0);
 
   useEffect(() => {
     const stopWatching = watchSession((newSession) => {
@@ -188,6 +183,7 @@ export default function App() {
         fontFamily: body, colorScheme: T.scheme,
         display: "flex", flexDirection: "column",
       }}>
+        {session && (
         <header style={{ position: "sticky", top: 0, zIndex: 50, background: T.headerBg, backdropFilter: "blur(10px)", borderBottom: `1px solid ${T.border}` }}>
           <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontFamily: display, fontWeight: 700, fontSize: 17, letterSpacing: "-0.02em", color: T.text }}>
@@ -209,27 +205,37 @@ export default function App() {
                 <Icon name={dark ? "sun" : "moon"} size={17} color={T.text} />
               </button>
 
-              {!checkingSession && (
-                <button
-                  onClick={() => (session ? signOut() : setShowLogin(true))}
-                  style={{
-                    height: 36, padding: "0 14px", borderRadius: 9, flexShrink: 0,
-                    border: `1px solid ${T.borderH}`, background: T.surface, color: T.text,
-                    fontSize: 13, fontWeight: 500, fontFamily: body, cursor: "pointer",
-                  }}
-                >
-                  {session ? "Log out" : "Log in"}
-                </button>
-              )}
+              <button
+                onClick={() => setRunId(runId + 1)}
+                style={{
+                  height: 36, padding: "0 14px", borderRadius: 9, flexShrink: 0,
+                  border: `1px solid ${T.borderH}`, background: T.surface, color: T.text,
+                  fontSize: 13, fontWeight: 500, fontFamily: body, cursor: "pointer",
+                }}
+              >
+                Rerun
+              </button>
+
+              <button
+                onClick={() => signOut()}
+                style={{
+                  height: 36, padding: "0 14px", borderRadius: 9, flexShrink: 0,
+                  border: `1px solid ${T.borderH}`, background: T.surface, color: T.text,
+                  fontSize: 13, fontWeight: 500, fontFamily: body, cursor: "pointer",
+                }}
+              >
+                Log out
+              </button>
             </div>
           </div>
         </header>
+        )}
 
         <main style={{ flex: 1, width: "100%", maxWidth: 1280, margin: "0 auto", padding: "0 24px 60px" }}>
           {checkingSession
             ? null
             : session
-              ? <div style={{ paddingTop: 22 }}><Picks /></div>
+              ? <div style={{ paddingTop: 22 }}><Picks key={runId} /></div>
               : <Welcome onGetStarted={() => setShowLogin(true)} />}
         </main>
 
