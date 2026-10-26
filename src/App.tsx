@@ -1,19 +1,15 @@
-// App.tsx — the whole app for now. Logged out shows the form, logged in
-// fetches recommendations and dumps them raw. Step 4 turns that dump into
-// actual cards; the fetching and error handling below shouldn't need to move.
-
 import { useState, useEffect } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { Welcome } from "./components/Welcome";
 import { AuthForm } from "./components/AuthForm";
 import { PickCard } from "./components/PickCard";
+import Icon from "./components/ui/Icon";
 import { watchSession, signOut } from "./api/auth";
 import { fetchRecommendations } from "./api/picks";
 import type { PicksResponse } from "./lib/types";
 import { THEMES, ThemeCtx, useT, body, display } from "./lib/theme";
 
-// separate storage key from the main app's "gdx-theme". localStorage is
-// per-origin so they wouldn't collide today anyway, but they will the day
-// both live on gamedex.com subdomains.
+// separate from the main app's "gdx-theme" so they won't clash on shared subdomains.
 const THEME_KEY = "gdxp-theme";
 
 function Picks() {
@@ -23,9 +19,7 @@ function Picks() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // the weights in recommender.py are still untuned guesses, so keeping the
-  // raw response one click away is worth the few lines. drop this once the
-  // numbers stop moving.
+  // debug aid while recommender.py's weights are untuned. drop once they settle.
   const [showRaw, setShowRaw] = useState(false);
 
   async function load() {
@@ -41,10 +35,7 @@ function Picks() {
     }
   }
 
-  // NOTE: StrictMode runs this twice in dev, so I'll see two requests in the
-  // uvicorn log and two rounds of RAWG calls. That's dev-only and expected —
-  // it does NOT happen in a build. Worth remembering before I go hunting for
-  // a double-fetch bug that isn't there.
+  // StrictMode fires this twice in dev only: two requests in the uvicorn log is expected.
   useEffect(() => { load(); }, []);
 
   const panel = {
@@ -54,7 +45,7 @@ function Picks() {
 
   if (loading) {
     return (
-      <div style={{ ...panel, width: "100%", maxWidth: 720 }}>
+      <div style={{ ...panel, maxWidth: 720 }}>
         <div style={{ color: T.text, fontSize: 14, fontWeight: 600 }}>Working out your picks…</div>
         <div style={{ color: T.meta, fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>
           This one's genuinely slow — the server is pulling candidate games from
@@ -65,15 +56,12 @@ function Picks() {
   }
 
   if (error) {
-    // "Failed to fetch" is the browser's way of saying the request never got
-    // a usable response at all — service down, or blocked by cors. anything
-    // else came back THROUGH the service as a fastapi `detail`, which means
-    // the connection is fine and the problem is further upstream. showing the
-    // cors hint on a rawg outage just sends me hunting in the wrong place.
+    // "Failed to fetch" = no usable response (service down or CORS). anything else
+    // is a FastAPI `detail`, so the connection itself is fine.
     const isConnectionFailure = error.toLowerCase().includes("failed to fetch");
 
     return (
-      <div style={{ ...panel, width: "100%", maxWidth: 720 }}>
+      <div style={{ ...panel, maxWidth: 720 }}>
         <div style={{ color: T.text, fontSize: 15, fontWeight: 600 }}>Couldn't load your picks</div>
         <div style={{ color: "#EF4444", fontSize: 13, marginTop: 8, lineHeight: 1.6 }}>{error}</div>
         <div style={{ color: T.metaDim, fontSize: 12.5, marginTop: 10, lineHeight: 1.6 }}>
@@ -96,7 +84,7 @@ function Picks() {
   const isColdStart = data.basis === "popular";
 
   return (
-    <div style={{ width: "100%", maxWidth: 900 }}>
+    <div style={{ maxWidth: 900 }}>
       <div style={{ ...panel, marginBottom: 20 }}>
         <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
           <div>
@@ -174,15 +162,20 @@ export default function App() {
     localStorage.setItem(THEME_KEY, dark ? "dark" : "light");
   }, [dark]);
 
+  useEffect(() => {
+    document.body.style.background = T.bg;
+  }, [T.bg]);
+
   const [session, setSession] = useState<Session | null>(null);
-  // brief moment on load before supabase answers. showing nothing beats
-  // flashing the login form at someone who's already logged in.
+  // avoids flashing the welcome page at someone who's already logged in.
   const [checkingSession, setCheckingSession] = useState(true);
+  const [showLogin, setShowLogin] = useState(false);
 
   useEffect(() => {
     const stopWatching = watchSession((newSession) => {
       setSession(newSession);
       setCheckingSession(false);
+      if (newSession) setShowLogin(false);
     });
 
     return stopWatching;
@@ -193,50 +186,75 @@ export default function App() {
       <div style={{
         minHeight: "100vh", background: T.bg, color: T.text,
         fontFamily: body, colorScheme: T.scheme,
-        display: "flex", flexDirection: "column", alignItems: "center",
+        display: "flex", flexDirection: "column",
       }}>
-        <header style={{
-          width: "100%", maxWidth: 900, padding: "18px 24px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: T.accent, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: display, fontWeight: 700, fontSize: 13 }}>gdx</div>
+        <header style={{ position: "sticky", top: 0, zIndex: 50, background: T.headerBg, backdropFilter: "blur(10px)", borderBottom: `1px solid ${T.border}` }}>
+          <div style={{ maxWidth: 1280, margin: "0 auto", padding: "0 24px", height: 60, display: "flex", alignItems: "center", gap: 12 }}>
             <span style={{ fontFamily: display, fontWeight: 700, fontSize: 17, letterSpacing: "-0.02em", color: T.text }}>
-              Gamedex <span style={{ color: T.accent }}>Picks</span>
+              Game<span style={{ color: T.accent }}>dex</span>
+              <span style={{ color: T.meta, fontWeight: 600, marginLeft: 6 }}>Picks</span>
             </span>
-          </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <button
-              onClick={() => setDark(!dark)}
-              style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${T.borderH}`, background: T.btn, color: T.text, fontSize: 12.5, fontWeight: 500, fontFamily: body, cursor: "pointer" }}
-            >
-              {dark ? "Light" : "Dark"}
-            </button>
-
-            {/* hidden while checking, so a logged-in user never sees this
-                flash on and off during page load. */}
-            {!checkingSession && session && (
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 12 }}>
               <button
-                onClick={() => signOut()}
-                style={{ padding: "7px 12px", borderRadius: 8, border: `1px solid ${T.borderH}`, background: T.btn, color: T.text, fontSize: 12.5, fontWeight: 500, fontFamily: body, cursor: "pointer" }}
+                onClick={() => setDark(!dark)}
+                title={dark ? "Switch to light mode" : "Switch to dark mode"}
+                aria-label="Toggle theme"
+                style={{
+                  width: 36, height: 36, borderRadius: 9, flexShrink: 0,
+                  border: `1px solid ${T.borderH}`, background: T.surface, color: T.text,
+                  display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
+                }}
               >
-                Log out
+                <Icon name={dark ? "sun" : "moon"} size={17} color={T.text} />
               </button>
-            )}
+
+              {!checkingSession && (
+                <button
+                  onClick={() => (session ? signOut() : setShowLogin(true))}
+                  style={{
+                    height: 36, padding: "0 14px", borderRadius: 9, flexShrink: 0,
+                    border: `1px solid ${T.borderH}`, background: T.surface, color: T.text,
+                    fontSize: 13, fontWeight: 500, fontFamily: body, cursor: "pointer",
+                  }}
+                >
+                  {session ? "Log out" : "Log in"}
+                </button>
+              )}
+            </div>
           </div>
         </header>
 
-        <main style={{
-          flex: 1, width: "100%", padding: "24px 24px 60px",
-          display: "flex", justifyContent: "center", alignItems: "flex-start",
-        }}>
+        <main style={{ flex: 1, width: "100%", maxWidth: 1280, margin: "0 auto", padding: "0 24px 60px" }}>
           {checkingSession
-            ? <div style={{ color: T.meta, fontSize: 13.5 }}>Checking your session…</div>
+            ? null
             : session
-              ? <Picks />
-              : <AuthForm />}
+              ? <div style={{ paddingTop: 22 }}><Picks /></div>
+              : <Welcome onGetStarted={() => setShowLogin(true)} />}
         </main>
+
+        {/* required by RAWG's free terms, same as the main app. */}
+        <footer style={{ borderTop: `1px solid ${T.border}`, padding: "20px 24px", textAlign: "center" }}>
+          <span style={{ color: T.metaDim, fontSize: 12 }}>
+            Game data by{" "}
+            <a href="https://rawg.io" target="_blank" rel="noopener noreferrer" style={{ color: T.link, fontWeight: 500, textDecoration: "none" }}>RAWG</a>
+          </span>
+        </footer>
+
+        {showLogin && !session && (
+          <div
+            // close only when the press itself starts on the backdrop, so a drag
+            // out of an input doesn't dismiss the form. same as the main app.
+            onPointerDown={(e) => { if (e.target === e.currentTarget) setShowLogin(false); }}
+            style={{
+              position: "fixed", inset: 0, zIndex: 100,
+              background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
+              display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
+            }}
+          >
+            <AuthForm />
+          </div>
+        )}
       </div>
     </ThemeCtx.Provider>
   );

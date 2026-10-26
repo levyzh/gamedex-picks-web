@@ -3,7 +3,7 @@
 // client. today that's one endpoint.
 
 import { supabase } from "./supabase";
-import type { PicksResponse } from "../lib/types";
+import type { CoversResponse, PicksResponse } from "../lib/types";
 
 const BASE = import.meta.env.VITE_PICKS_API_URL;
 
@@ -41,4 +41,17 @@ export async function fetchRecommendations(): Promise<PicksResponse> {
   }
 
   return response.json();
+}
+
+// public, no token: the welcome page's background art. failure is cosmetic,
+// so callers just get an empty list.
+export async function fetchCovers(): Promise<string[]> {
+  try {
+    const response = await fetch(`${BASE}/covers`);
+    if (!response.ok) return [];
+    const body: CoversResponse = await response.json();
+    return body.covers;
+  } catch {
+    return [];
+  }
 }

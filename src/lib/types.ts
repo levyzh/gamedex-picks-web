@@ -32,3 +32,7 @@ export interface PicksResponse {
   candidates_considered: number | null;
   results: Recommendation[];
 }
+
+export interface CoversResponse {
+  covers: string[];
+}
