@@ -2,9 +2,16 @@ import { useEffect, useState } from "react";
 import { fetchCovers } from "../api/picks";
 import { useT } from "../lib/theme";
 
-const SPEED_PX_PER_SEC = 4;
+const SPEED_PX_PER_SEC = 3;
 const ROW_SPEEDS = [1, 0.8, 1.15, 0.9, 1.25, 0.85];
 const GAP = 6;
+
+// RAWG's originals are often 1-2MB each. Re-decoding ~200 of them when the tab
+// regains focus is what froze the page; RAWG's resize path serves ~30KB versions.
+function small(url: string) {
+  return url.replace("media.rawg.io/media/games/", "media.rawg.io/media/resize/420/-/games/")
+    .replace("media.rawg.io/media/screenshots/", "media.rawg.io/media/resize/420/-/screenshots/");
+}
 
 function tileWidth() {
   return Math.min(150, window.innerWidth * 0.3);
@@ -52,16 +59,25 @@ export function CoverWall() {
           return (
             <div key={r} style={{
               display: "flex", gap: GAP, marginBottom: GAP, width: "max-content",
+              willChange: "transform",
               animation: still ? "none" : `gdxp-slide ${duration}s linear infinite`,
               animationDirection: r % 2 ? "reverse" : "normal",
               // negative delay starts each row mid-loop instead of all lined up.
               animationDelay: `${-((r * 0.37) % 1) * duration}s`,
             }}>
               {[...slice, ...slice].map((cover, i) => (
-                <div key={i} style={{
-                  width, aspectRatio: "16/9", flexShrink: 0, borderRadius: 6,
-                  backgroundImage: `url(${cover})`, backgroundSize: "cover", backgroundPosition: "center",
-                }} />
+                <img
+                  key={i}
+                  src={small(cover)}
+                  alt=""
+                  decoding="async"
+                  // if RAWG ever drops the resize path, fall back to the full image once.
+                  onError={(e) => { if (e.currentTarget.src !== cover) e.currentTarget.src = cover; }}
+                  style={{
+                    width, aspectRatio: "16/9", flexShrink: 0, borderRadius: 6,
+                    objectFit: "cover", display: "block",
+                  }}
+                />
               ))}
             </div>
           );
