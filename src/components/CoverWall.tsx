@@ -71,11 +71,14 @@ export function CoverWall() {
                   src={small(cover)}
                   alt=""
                   decoding="async"
+                  // set on the element directly: a state update per tile would re-render all ~400.
+                  onLoad={(e) => { e.currentTarget.style.opacity = "1"; }}
                   // if RAWG ever drops the resize path, fall back to the full image once.
                   onError={(e) => { if (e.currentTarget.src !== cover) e.currentTarget.src = cover; }}
                   style={{
                     width, aspectRatio: "16/9", flexShrink: 0, borderRadius: 6,
                     objectFit: "cover", display: "block",
+                    opacity: 0, transition: still ? "none" : "opacity 0.6s ease",
                   }}
                 />
               ))}
