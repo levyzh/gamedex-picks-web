@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { Welcome } from "./components/Welcome";
-import { AuthForm } from "./components/AuthForm";
 import { PickCard } from "./components/PickCard";
 import Icon from "./components/ui/Icon";
 import { watchSession, signOut } from "./api/auth";
@@ -162,7 +161,6 @@ export default function App() {
   const [session, setSession] = useState<Session | null>(null);
   // avoids flashing the welcome page at someone who's already logged in.
   const [checkingSession, setCheckingSession] = useState(true);
-  const [showLogin, setShowLogin] = useState(false);
   // bumping this remounts <Picks>, which re-runs the recommender.
   const [runId, setRunId] = useState(0);
 
@@ -170,7 +168,6 @@ export default function App() {
     const stopWatching = watchSession((newSession) => {
       setSession(newSession);
       setCheckingSession(false);
-      if (newSession) setShowLogin(false);
     });
 
     return stopWatching;
@@ -236,7 +233,7 @@ export default function App() {
             ? null
             : session
               ? <div style={{ paddingTop: 22 }}><Picks key={runId} /></div>
-              : <Welcome onGetStarted={() => setShowLogin(true)} />}
+              : <Welcome />}
         </main>
 
         {/* required by RAWG's free terms, same as the main app. */}
@@ -246,21 +243,6 @@ export default function App() {
             <a href="https://rawg.io" target="_blank" rel="noopener noreferrer" style={{ color: T.link, fontWeight: 500, textDecoration: "none" }}>RAWG</a>
           </span>
         </footer>
-
-        {showLogin && !session && (
-          <div
-            // close only when the press itself starts on the backdrop, so a drag
-            // out of an input doesn't dismiss the form. same as the main app.
-            onPointerDown={(e) => { if (e.target === e.currentTarget) setShowLogin(false); }}
-            style={{
-              position: "fixed", inset: 0, zIndex: 100,
-              background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)",
-              display: "flex", alignItems: "center", justifyContent: "center", padding: 24,
-            }}
-          >
-            <AuthForm />
-          </div>
-        )}
       </div>
     </ThemeCtx.Provider>
   );

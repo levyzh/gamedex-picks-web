@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { CoverWall } from "./CoverWall";
+import { AuthForm } from "./AuthForm";
 import { fetchStats } from "../api/picks";
 import type { StatsResponse } from "../lib/types";
 import { display, useT } from "../lib/theme";
@@ -28,7 +29,7 @@ const STEPS = [
   },
 ];
 
-export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
+export function Welcome() {
   const T = useT();
   const [stats, setStats] = useState<StatsResponse | null>(null);
 
@@ -77,16 +78,7 @@ export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
             dropped, then ranks new games by how closely they match.
           </p>
 
-          <button
-            onClick={onGetStarted}
-            style={{
-              marginTop: 32, flexShrink: 0, height: 44, padding: "0 26px", borderRadius: 10,
-              border: "none", background: T.accent, color: "#fff",
-              fontSize: 15, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            Get started
-          </button>
+          <AuthForm />
         </section>
 
         {statItems.length > 0 && (
