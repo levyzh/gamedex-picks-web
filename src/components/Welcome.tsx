@@ -40,7 +40,12 @@ export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
       <CoverWall />
 
       <div style={{ position: "relative", zIndex: 1, maxWidth: 1040, margin: "0 auto" }}>
-        <section style={{ textAlign: "center", padding: "88px 0 72px" }}>
+        {/* fills the first screen under the 60px header; stats and steps start below the fold. */}
+        <section style={{
+          minHeight: "calc(100svh - 60px)", padding: "48px 0",
+          display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+          textAlign: "center",
+        }}>
           <h1 style={{
             margin: "0 auto", maxWidth: 760, fontFamily: display, fontWeight: 700,
             fontSize: "clamp(34px, 6vw, 56px)", lineHeight: 1.05, letterSpacing: "-0.03em",
@@ -61,7 +66,7 @@ export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
           <button
             onClick={onGetStarted}
             style={{
-              marginTop: 32, height: 44, padding: "0 26px", borderRadius: 10,
+              marginTop: 32, flexShrink: 0, height: 44, padding: "0 26px", borderRadius: 10,
               border: "none", background: T.accent, color: "#fff",
               fontSize: 15, fontWeight: 600, cursor: "pointer",
             }}
@@ -71,6 +76,7 @@ export function Welcome({ onGetStarted }: { onGetStarted: () => void }) {
         </section>
 
         <section style={{
+          marginTop: 56,
           // 1px gaps over a border-coloured background draw the dividers, in rows or stacked.
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 1,
           background: T.border, border: `1px solid ${T.border}`, borderRadius: 12, overflow: "hidden",
