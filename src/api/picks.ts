@@ -3,7 +3,7 @@
 // client. today that's one endpoint.
 
 import { supabase } from "./supabase";
-import type { CoversResponse, PicksResponse, StatsResponse } from "../lib/types";
+import type { CoversResponse, ExamplesResponse, PicksResponse, StatsResponse } from "../lib/types";
 
 const BASE = import.meta.env.VITE_PICKS_API_URL;
 
@@ -64,5 +64,18 @@ export async function fetchStats(): Promise<StatsResponse | null> {
     return await response.json();
   } catch {
     return null;
+  }
+}
+
+// public, no token: slug -> cover for the how-it-works examples. empty on failure,
+// and the rows just show without pictures.
+export async function fetchExamples(): Promise<Record<string, string>> {
+  try {
+    const response = await fetch(`${BASE}/examples`);
+    if (!response.ok) return {};
+    const body: ExamplesResponse = await response.json();
+    return body.covers;
+  } catch {
+    return {};
   }
 }

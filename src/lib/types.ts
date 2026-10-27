@@ -37,6 +37,10 @@ export interface CoversResponse {
   covers: string[];
 }
 
+export interface ExamplesResponse {
+  covers: Record<string, string>;
+}
+
 export interface StatsResponse {
   games: number;
   genres: number;

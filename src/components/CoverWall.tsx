@@ -1,17 +1,10 @@
 import { useEffect, useState } from "react";
-import { fetchCovers } from "../api/picks";
+import { smallCover } from "../lib/covers";
 import { useT } from "../lib/theme";
 
 const SPEED_PX_PER_SEC = 3;
 const ROW_SPEEDS = [1, 0.8, 1.15, 0.9, 1.25, 0.85];
 const GAP = 6;
-
-// RAWG's originals are often 1-2MB each. Re-decoding ~200 of them when the tab
-// regains focus is what froze the page; RAWG's resize path serves ~30KB versions.
-function small(url: string) {
-  return url.replace("media.rawg.io/media/games/", "media.rawg.io/media/resize/420/-/games/")
-    .replace("media.rawg.io/media/screenshots/", "media.rawg.io/media/resize/420/-/screenshots/");
-}
 
 function tileWidth() {
   return Math.min(150, window.innerWidth * 0.3);
@@ -22,14 +15,11 @@ function rowCount() {
   return Math.ceil(window.innerHeight / rowHeight) + 1;
 }
 
-export function CoverWall() {
+export function CoverWall({ covers }: { covers: string[] }) {
   const T = useT();
-  const [covers, setCovers] = useState<string[]>([]);
   const [rows, setRows] = useState(rowCount);
 
   useEffect(() => {
-    fetchCovers().then(setCovers);
-
     const onResize = () => setRows(rowCount());
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
@@ -68,7 +58,7 @@ export function CoverWall() {
               {[...slice, ...slice].map((cover, i) => (
                 <img
                   key={i}
-                  src={small(cover)}
+                  src={smallCover(cover)}
                   alt=""
                   decoding="async"
                   // set on the element directly: a state update per tile would re-render all ~400.
